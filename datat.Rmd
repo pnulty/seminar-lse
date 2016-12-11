@@ -1,0 +1,52 @@
+---
+title: "datat"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Party odds ratios
+
+```{r echo=FALSE, message=FALSE, error=FALSE}
+library(shiny)
+library(feather)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(DT)
+rels <- read_feather('/home/paul/Dropbox/methodologySeminar/corpora/uk_relations.feather') %>%
+  rename(sentenceid = sent_id)
+feats <- read_feather('/home/paul/Dropbox/methodologySeminar/corpora/uk_features.feather') %>% rename(sentenceid = sent_id)
+full <- read_feather('/home/paul/Dropbox/methodologySeminar/corpora/all_uk.feather')
+
+md <- select(full, sentenceid, manifestoid, year, party, econMeans, socialMeans, gold_scale) %>%
+  filter(party == 'Conservatives' | party == 'Labour', gold_scale != 'Neither')
+comb <- inner_join(feats, md, by='sentenceid')
+
+
+party_totals <- group_by(comb, feature, party) %>% summarise(Freq = n()) %>% spread(party, Freq) %>% na.omit
+party_odds <- mutate(party_totals, odds = log(Labour/Conservatives)) %>% arrange(desc(odds))
+party_odds2 <- party_odds
+party_odds2<- mutate(party_odds2, odds_ratio = log(Labour/Conservatives))
+datatable(party_odds2)
+```
+\
+\
+With scale
+```{r echo=FALSE, message=FALSE, error=FALSE}
+scale_totals <- group_by(comb, feature) %>% summarise(Freq=n())
+scale_totals <- group_by(comb, feature) %>% summarise(Position = sum(log(socialMeans+3))) %>% filter(Position != 'NaN')
+
+datatable(scale_totals)
+```
+
+\
+\
+```{r echo=FALSE, message=FALSE, error=FALSE}
+ww <- read_feather('/home/paul/Dropbox/methodologySeminar/wordWeightsGaussian.feather')
+datatable(ww)
+```
